@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 
-// Material UI
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -20,15 +19,39 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 import { useCourses } from '../../hooks/useCourses';
 import { useCategories } from '../../hooks/useCategories';
+import LmsMetadataFields from '../../components/LmsMetadataFields';
 
-// Validation Schema
+const optionalUrl = yup.string().trim().transform((value) => value || undefined).url('Must be a valid image URL.').optional();
+
 const schema = yup.object().shape({
   name: yup.string().min(3, 'Course Name must be at least 3 characters.').required('Course Name is required.'),
   categoryId: yup.string().required('Category mapping is required.'),
   description: yup.string().max(600, 'Description cannot exceed 600 characters.').optional(),
-  thumbnail: yup.string().url('Must be a valid image URL.').optional(),
+  thumbnail: optionalUrl,
   status: yup.string().oneOf(['Active', 'Inactive']).required('Status is required.'),
+  slug: yup.string().trim().required('Integrated URL Slug is required.'),
+  level: yup.string().oneOf(['Beginner', 'Intermediate', 'Advanced']).required('Level is required.'),
+  language: yup.string().trim().required('Language is required.'),
+  estimatedDuration: yup.string().trim().required('Estimated duration is required.'),
+  brandColor: yup.string().trim().optional(),
+  bannerImage: optionalUrl,
+  icon: yup.string().trim().optional(),
 });
+
+const defaultValues = {
+  name: '',
+  categoryId: '',
+  description: '',
+  thumbnail: '',
+  status: 'Active',
+  slug: '',
+  level: 'Beginner',
+  language: 'English',
+  estimatedDuration: '',
+  brandColor: '#6C1D5F',
+  bannerImage: '',
+  icon: '',
+};
 
 const CourseForm = () => {
   const { id } = useParams();
@@ -37,35 +60,20 @@ const CourseForm = () => {
 
   const { useDetail, useCreate, useUpdate } = useCourses();
   const { useList: useCategoriesList } = useCategories();
-  
+
   const createMutation = useCreate();
   const updateMutation = useUpdate(id);
-
-  // Fetch lists
   const { data: categories = [], isLoading: isCategoriesLoading } = useCategoriesList();
   const { data: course, isLoading: isDetailLoading } = useDetail(id);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
-    defaultValues: {
-      name: '',
-      categoryId: '',
-      description: '',
-      thumbnail: '',
-      status: 'Active',
-    },
+    defaultValues,
   });
 
-  // Populate values in Edit Mode
   useEffect(() => {
     if (isEditMode && course) {
-      reset({
-        name: course.name,
-        categoryId: course.categoryId,
-        description: course.description,
-        thumbnail: course.thumbnail,
-        status: course.status,
-      });
+      reset({ ...defaultValues, ...course });
     }
   }, [course, isEditMode, reset]);
 
@@ -77,8 +85,8 @@ const CourseForm = () => {
         await createMutation.mutateAsync(data);
       }
       navigate('/course');
-    } catch (e) {
-      // Error handled by hook toasts
+    } catch {
+      // Error handled by hook toasts.
     }
   };
 
@@ -95,121 +103,55 @@ const CourseForm = () => {
 
   return (
     <Box>
-      {/* Header action panel */}
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Button
-          variant="outlined"
-          color="inherit"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/course')}
-          sx={{ mr: 1 }}
-        >
+        <Button variant="outlined" color="inherit" startIcon={<ArrowBackIcon />} onClick={() => navigate('/course')} sx={{ mr: 1 }}>
           Back
         </Button>
         <MenuBookIcon color="primary" sx={{ fontSize: 30 }} />
-        <Typography variant="h4" fontWeight={700}>
-          {isEditMode ? 'Edit Course' : 'Create Course'}
-        </Typography>
+        <Typography variant="h4" fontWeight={700}>{isEditMode ? 'Edit Course' : 'Create Course'}</Typography>
       </Box>
 
-      {/* Form Grid */}
-      <Card sx={{ maxWidth: 720 }}>
+      <Card sx={{ maxWidth: 920 }}>
         <CardContent sx={{ p: 4 }}>
-          <Typography variant="h6" fontWeight={700} gutterBottom>
-            Course Metadata & Branding
-          </Typography>
+          <Typography variant="h6" fontWeight={700} gutterBottom>Course Metadata & Branding</Typography>
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 3 }}>
-            Associate this course to a category, write standard descriptions, and set thumbnail URLs.
+            Associate the course to a category and define the catalog metadata used in the nested curriculum tree.
           </Typography>
           <Divider sx={{ mb: 4 }} />
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={8}>
-                <TextField
-                  {...register('name')}
-                  label="Course Name"
-                  placeholder="e.g. Next.js Foundations"
-                  fullWidth
-                  error={!!errors.name}
-                  helperText={errors.name?.message}
-                />
+                <TextField {...register('name')} label="Course Name" placeholder="e.g. Next.js Foundations" fullWidth error={!!errors.name} helperText={errors.name?.message} />
               </Grid>
 
               <Grid item xs={12} sm={4}>
-                <TextField
-                  select
-                  {...register('categoryId')}
-                  label="Category Mapping"
-                  fullWidth
-                  defaultValue=""
-                  error={!!errors.categoryId}
-                  helperText={errors.categoryId?.message}
-                >
-                  {categories.map((cat) => (
-                    <MenuItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </MenuItem>
-                  ))}
+                <TextField select {...register('categoryId')} label="Category Mapping" fullWidth defaultValue="" error={!!errors.categoryId} helperText={errors.categoryId?.message}>
+                  {categories.map((cat) => <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>)}
                 </TextField>
               </Grid>
 
               <Grid item xs={12}>
-                <TextField
-                  {...register('description')}
-                  label="Description"
-                  placeholder="Detailed summary outlining course curriculum and target student roles..."
-                  fullWidth
-                  multiline
-                  rows={4}
-                  error={!!errors.description}
-                  helperText={errors.description?.message}
-                />
+                <TextField {...register('description')} label="Description" placeholder="Detailed summary outlining course curriculum and target student roles..." fullWidth multiline rows={4} error={!!errors.description} helperText={errors.description?.message} />
               </Grid>
 
               <Grid item xs={12} sm={8}>
-                <TextField
-                  {...register('thumbnail')}
-                  label="Thumbnail Image URL"
-                  placeholder="e.g. https://images.unsplash.com/photo-..."
-                  fullWidth
-                  error={!!errors.thumbnail}
-                  helperText={errors.thumbnail?.message}
-                />
+                <TextField {...register('thumbnail')} label="Thumbnail Image URL" placeholder="https://images.unsplash.com/..." fullWidth error={!!errors.thumbnail} helperText={errors.thumbnail?.message} />
               </Grid>
 
               <Grid item xs={12} sm={4}>
-                <TextField
-                  select
-                  {...register('status')}
-                  label="Status"
-                  fullWidth
-                  defaultValue="Active"
-                  error={!!errors.status}
-                  helperText={errors.status?.message}
-                >
+                <TextField select {...register('status')} label="Status" fullWidth defaultValue="Active" error={!!errors.status} helperText={errors.status?.message}>
                   <MenuItem value="Active">Active</MenuItem>
                   <MenuItem value="Inactive">Inactive</MenuItem>
                 </TextField>
               </Grid>
+
+              <LmsMetadataFields register={register} errors={errors} />
             </Grid>
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 5 }}>
-              <Button
-                variant="outlined"
-                color="inherit"
-                onClick={() => navigate('/course')}
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={isSaving}
-                sx={{ minWidth: 120 }}
-              >
+              <Button variant="outlined" color="inherit" onClick={() => navigate('/course')} disabled={isSaving}>Cancel</Button>
+              <Button type="submit" variant="contained" color="primary" disabled={isSaving} sx={{ minWidth: 120 }}>
                 {isSaving ? <CircularProgress size={24} color="inherit" /> : 'Save Course'}
               </Button>
             </Box>

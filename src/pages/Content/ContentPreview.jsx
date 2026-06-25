@@ -20,7 +20,6 @@ import TableRow from '@mui/material/TableRow';
 // Icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FilePresentIcon from '@mui/icons-material/FilePresent';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -28,6 +27,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 
 import { useContents } from '../../hooks/useContents';
 import StatusBadge from '../../components/StatusBadge';
+import { BannerPreview, MetadataDetails } from '../../components/LmsMetadataSummary';
 
 const ContentPreview = () => {
   const { id } = useParams();
@@ -278,7 +278,8 @@ const ContentPreview = () => {
         <Grid item xs={12} md={3}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" fontWeight={600} gutterBottom>
+              <BannerPreview item={content} height={120} />
+              <Typography variant="subtitle2" color="text.secondary" fontWeight={600} gutterBottom sx={{ mt: 3 }}>
                 Attachment Details
               </Typography>
               <Divider sx={{ mb: 2 }} />
@@ -310,6 +311,8 @@ const ContentPreview = () => {
                     {content.description || 'No description supplied.'}
                   </Typography>
                 </Box>
+                <Divider />
+                <MetadataDetails item={content} />
               </Box>
             </CardContent>
           </Card>
@@ -320,3 +323,5 @@ const ContentPreview = () => {
 };
 
 export default ContentPreview;
+
+

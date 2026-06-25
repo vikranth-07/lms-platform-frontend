@@ -1,10 +1,11 @@
 import { getDBTable, saveDBTable, addRecentActivity } from '../utils/dbInit';
 import { delay, generateId } from './api';
+import { buildLmsMetadata, withLmsMetadata } from '../utils/lmsMetadata';
 
 export const categoryService = {
   async getAll() {
     await delay();
-    return getDBTable('categories');
+    return getDBTable('categories').map((category) => withLmsMetadata(category, category.name));
   },
 
   async getById(id) {
@@ -12,14 +13,13 @@ export const categoryService = {
     const categories = getDBTable('categories');
     const category = categories.find((c) => c.id === id);
     if (!category) throw new Error('Category not found');
-    return category;
+    return withLmsMetadata(category, category.name);
   },
 
   async create(data) {
     await delay();
     const categories = getDBTable('categories');
-    
-    // Check duplicate name
+
     if (categories.some((c) => c.name.toLowerCase() === data.name.toLowerCase())) {
       throw new Error('A category with this name already exists.');
     }
@@ -29,6 +29,7 @@ export const categoryService = {
       name: data.name,
       description: data.description || '',
       status: data.status || 'Active',
+      ...buildLmsMetadata(data, data.name),
     };
 
     categories.push(newCategory);
@@ -43,7 +44,6 @@ export const categoryService = {
     const index = categories.findIndex((c) => c.id === id);
     if (index === -1) throw new Error('Category not found');
 
-    // Check duplicate name on other categories
     if (categories.some((c) => c.id !== id && c.name.toLowerCase() === data.name.toLowerCase())) {
       throw new Error('Another category with this name already exists.');
     }
@@ -53,6 +53,7 @@ export const categoryService = {
       name: data.name,
       description: data.description || '',
       status: data.status || 'Active',
+      ...buildLmsMetadata(data, data.name),
     };
 
     categories[index] = updatedCategory;
@@ -67,7 +68,6 @@ export const categoryService = {
     const category = categories.find((c) => c.id === id);
     if (!category) throw new Error('Category not found');
 
-    // Check if courses are attached to this category
     const courses = getDBTable('courses');
     const hasCourses = courses.some((c) => c.categoryId === id);
     if (hasCourses) {

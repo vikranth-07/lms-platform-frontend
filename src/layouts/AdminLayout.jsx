@@ -3,7 +3,6 @@ import { Outlet, Navigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
 
 import Navbar from '../components/Navbar';
 import Sidebar, { DRAWER_WIDTH } from '../components/Sidebar';
@@ -11,10 +10,9 @@ import { useUI } from '../context/UIContext';
 import { useAuth } from '../context/AuthContext';
 
 const AdminLayout = () => {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const { sidebarOpen } = useUI();
   const theme = useTheme();
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
   // Route Guard: Check if authenticated. If loading, show blank placeholder
   if (loading) {
@@ -39,7 +37,6 @@ const AdminLayout = () => {
         sx={{
           flexGrow: 1,
           p: { xs: 2, sm: 3 },
-          width: '100%',
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',

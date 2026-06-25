@@ -44,7 +44,7 @@ const ForgotPassword = () => {
       await delay(1000); // Simulate network
       setSubmitted(true);
       showToast(`Recovery link sent to ${data.email}!`, 'success');
-    } catch (err) {
+    } catch {
       showToast('An error occurred. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);

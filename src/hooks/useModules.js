@@ -70,7 +70,7 @@ export const useModules = () => {
   });
 
   const useReorder = () => useMutation({
-    mutationFn: ({ orderedIds }) => moduleService.updatePositions(orderedIds),
+    mutationFn: ({ orderedIds, courseId }) => moduleService.updatePositions({ orderedIds, courseId }),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['modules'] });
       if (variables.courseId) {

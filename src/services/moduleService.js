@@ -1,29 +1,27 @@
 import { getDBTable, saveDBTable, addRecentActivity } from '../utils/dbInit';
 import { delay, generateId } from './api';
+import { buildLmsMetadata, withLmsMetadata } from '../utils/lmsMetadata';
+
+const enrichModule = (mod, courses) => ({
+  ...withLmsMetadata(mod, mod.name),
+  courseName: courses.find((c) => c.id === mod.courseId)?.name || 'Unknown Course',
+});
 
 export const moduleService = {
   async getAll() {
     await delay();
     const modules = getDBTable('modules');
     const courses = getDBTable('courses');
-
-    return modules.map((mod) => ({
-      ...mod,
-      courseName: courses.find((c) => c.id === mod.courseId)?.name || 'Unknown Course',
-    })).sort((a, b) => a.position - b.position);
+    return modules.map((mod) => enrichModule(mod, courses)).sort((a, b) => a.position - b.position);
   },
 
   async getByCourseId(courseId) {
     await delay();
     const modules = getDBTable('modules');
     const courses = getDBTable('courses');
-
     return modules
       .filter((m) => m.courseId === courseId)
-      .map((mod) => ({
-        ...mod,
-        courseName: courses.find((c) => c.id === mod.courseId)?.name || 'Unknown Course',
-      }))
+      .map((mod) => enrichModule(mod, courses))
       .sort((a, b) => a.position - b.position);
   },
 
@@ -31,26 +29,18 @@ export const moduleService = {
     await delay();
     const modules = getDBTable('modules');
     const courses = getDBTable('courses');
-    
     const mod = modules.find((m) => m.id === id);
     if (!mod) throw new Error('Module not found');
-
-    return {
-      ...mod,
-      courseName: courses.find((c) => c.id === mod.courseId)?.name || 'Unknown Course',
-    };
+    return enrichModule(mod, courses);
   },
 
   async create(data) {
     await delay();
     const modules = getDBTable('modules');
-
-    // Validate course exists
     const courses = getDBTable('courses');
     const courseExists = courses.some((c) => c.id === data.courseId);
     if (!courseExists) throw new Error('Selected Course does not exist.');
 
-    // Calculate position
     const courseModules = modules.filter((m) => m.courseId === data.courseId);
     const nextPosition = courseModules.length > 0
       ? Math.max(...courseModules.map((m) => m.position)) + 1
@@ -62,6 +52,7 @@ export const moduleService = {
       name: data.name,
       description: data.description || '',
       position: nextPosition,
+      ...buildLmsMetadata(data, data.name),
     };
 
     modules.push(newModule);
@@ -76,7 +67,6 @@ export const moduleService = {
     const index = modules.findIndex((m) => m.id === id);
     if (index === -1) throw new Error('Module not found');
 
-    // Validate course exists
     const courses = getDBTable('courses');
     const courseExists = courses.some((c) => c.id === data.courseId);
     if (!courseExists) throw new Error('Selected Course does not exist.');
@@ -86,6 +76,7 @@ export const moduleService = {
       courseId: data.courseId,
       name: data.name,
       description: data.description || '',
+      ...buildLmsMetadata(data, data.name),
     };
 
     modules[index] = updatedModule;
@@ -100,7 +91,6 @@ export const moduleService = {
     const mod = modules.find((m) => m.id === id);
     if (!mod) throw new Error('Module not found');
 
-    // Check if submodules are attached
     const submodules = getDBTable('submodules');
     const hasSubmodules = submodules.some((s) => s.moduleId === id);
     if (hasSubmodules) {
@@ -108,14 +98,13 @@ export const moduleService = {
     }
 
     const filtered = modules.filter((m) => m.id !== id);
-    // Re-adjust positions for the rest of modules in the course
     const courseModules = filtered.filter((m) => m.courseId === mod.courseId)
       .sort((a, b) => a.position - b.position)
       .map((m, idx) => ({ ...m, position: idx + 1 }));
 
     const finalModules = [
       ...filtered.filter((m) => m.courseId !== mod.courseId),
-      ...courseModules
+      ...courseModules,
     ];
 
     saveDBTable('modules', finalModules);
@@ -123,20 +112,25 @@ export const moduleService = {
     return { success: true, id };
   },
 
-  async updatePositions(orderedIds) {
-    await delay(300); // Quick response
+  async updatePositions(input) {
+    await delay(300);
     const modules = getDBTable('modules');
-    
-    // Update position of the matching ids
+    const orderedIds = Array.isArray(input) ? input : input?.orderedIds || [];
+    const courseId = Array.isArray(input) ? undefined : input?.courseId;
+
+    const scopedModules = courseId
+      ? modules.filter((module) => module.courseId === courseId)
+      : modules;
+
     orderedIds.forEach((id, index) => {
-      const mod = modules.find((m) => m.id === id);
+      const mod = scopedModules.find((module) => module.id === id);
       if (mod) {
         mod.position = index + 1;
       }
     });
 
     saveDBTable('modules', modules);
-    addRecentActivity(`Modules were reordered.`, 'info');
-    return modules;
-  }
+    addRecentActivity('Modules were reordered.', 'info');
+    return modules.map((mod) => withLmsMetadata(mod, mod.name));
+  },
 };

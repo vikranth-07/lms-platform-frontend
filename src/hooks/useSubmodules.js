@@ -69,7 +69,7 @@ export const useSubmodules = () => {
   });
 
   const useReorder = () => useMutation({
-    mutationFn: ({ orderedIds }) => submoduleService.updatePositions(orderedIds),
+    mutationFn: ({ orderedIds, moduleId }) => submoduleService.updatePositions({ orderedIds, moduleId }),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['submodules'] });
       if (variables.moduleId) {
